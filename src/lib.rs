@@ -1,13 +1,15 @@
 mod oscillators;
+mod editor;
 
 use crate::oscillators::Oscillator;
 
 use nih_plug::prelude::*;
 use std::sync::Arc;
+use nih_plug_iced::IcedState;
 
 /// A test tone generator that can either generate a sine wave based on the plugin's parameters or
 /// based on the current MIDI input.
-struct OscillatorTest {
+pub struct OscillatorTest {
     params: Arc<OscillatorTestParams>,
     sample_rate: f32,
 
@@ -28,6 +30,11 @@ struct OscillatorTest {
 
 #[derive(Params)]
 struct OscillatorTestParams {
+    /// The editor state, saved together with the parameter state so the custom scaling can be
+    /// restored.
+    #[persist = "editor-state"]
+    editor_state: Arc<IcedState>,
+
     #[id = "gain"]
     pub gain: FloatParam,
 
@@ -56,6 +63,7 @@ impl Default for OscillatorTest {
 impl Default for OscillatorTestParams {
     fn default() -> Self {
         Self {
+            editor_state: editor::default_state(),
             gain: FloatParam::new(
                 "Gain",
                 -10.0,
@@ -123,6 +131,13 @@ impl Plugin for OscillatorTest {
 
     fn params(&self) -> Arc<dyn Params> {
         self.params.clone()
+    }
+
+    fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
+        editor::create(
+            self.params.clone(),
+            self.params.editor_state.clone(),
+        )
     }
 
     fn initialize(
