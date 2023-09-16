@@ -1,5 +1,6 @@
 mod oscillators;
 mod editor;
+pub mod parametric_equation;
 
 use crate::oscillators::Oscillator;
 
