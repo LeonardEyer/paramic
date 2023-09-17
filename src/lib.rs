@@ -10,8 +10,8 @@ use crate::parametric_equation::{EquationA, ParametricEquation};
 
 /// A test tone generator that can either generate a sine wave based on the plugin's parameters or
 /// based on the current MIDI input.
-pub struct OscillatorTest {
-    params: Arc<OscillatorTestParams>,
+pub struct Paramic {
+    params: Arc<ParamicParams>,
 
     sample_rate: f32,
 
@@ -31,7 +31,7 @@ pub struct OscillatorTest {
 }
 
 #[derive(Params)]
-struct OscillatorTestParams {
+struct ParamicParams {
     /// The editor state, saved together with the parameter state so the custom scaling can be
     /// restored.
     #[persist = "editor-state"]
@@ -65,22 +65,22 @@ struct OscillatorTestParams {
     pub k: IntParam,
 }
 
-impl Default for OscillatorTest {
+impl Default for Paramic {
 
     fn default() -> Self {
         Self {
-            params: Arc::new(OscillatorTestParams::default()),
+            params: Arc::new(ParamicParams::default()),
 
             sample_rate: 1.0,
 
             oscillator: oscillators::ParametricOscillatorA::new(
                 1.0, EquationA {
-                    a: OscillatorTestParams::default().a.value(),
-                    b: OscillatorTestParams::default().b.value(),
-                    c: OscillatorTestParams::default().c.value(),
-                    d: OscillatorTestParams::default().d.value(),
-                    j: OscillatorTestParams::default().j.value(),
-                    k: OscillatorTestParams::default().k.value(),
+                    a: ParamicParams::default().a.value(),
+                    b: ParamicParams::default().b.value(),
+                    c: ParamicParams::default().c.value(),
+                    d: ParamicParams::default().d.value(),
+                    j: ParamicParams::default().j.value(),
+                    k: ParamicParams::default().k.value(),
                 }),
 
             midi_note_id: 0,
@@ -90,7 +90,7 @@ impl Default for OscillatorTest {
     }
 }
 
-impl Default for OscillatorTestParams {
+impl Default for ParamicParams {
     fn default() -> Self {
         Self {
             editor_state: EguiState::from_size(300, 500),
@@ -174,14 +174,14 @@ impl Default for OscillatorTestParams {
     }
 }
 
-impl OscillatorTest {
+impl Paramic {
     fn calculate_sine(&mut self, frequency: f32) -> f32 {
         self.oscillator.set_frequency(frequency);
         self.oscillator.sample()
     }
 }
 
-impl Plugin for OscillatorTest {
+impl Plugin for Paramic {
     const NAME: &'static str = "Oscillator test";
     const VENDOR: &'static str = "Leonard Eyer";
     const URL: &'static str = "https://youtu.be/dQw4w9WgXcQ";
@@ -351,7 +351,7 @@ impl Plugin for OscillatorTest {
     }
 }
 
-impl ClapPlugin for OscillatorTest {
+impl ClapPlugin for Paramic {
     const CLAP_ID: &'static str = "com.leonard-eyer.oscillator";
     const CLAP_DESCRIPTION: Option<&'static str> =
         Some("An optionally MIDI controlled oscillator test tone");
@@ -366,7 +366,7 @@ impl ClapPlugin for OscillatorTest {
     ];
 }
 
-impl Vst3Plugin for OscillatorTest {
+impl Vst3Plugin for Paramic {
     const VST3_CLASS_ID: [u8; 16] = *b"OsillcatorTestPl";
     const VST3_SUBCATEGORIES: &'static [Vst3SubCategory] = &[
         Vst3SubCategory::Instrument,
@@ -375,5 +375,5 @@ impl Vst3Plugin for OscillatorTest {
     ];
 }
 
-nih_export_clap!(OscillatorTest);
-nih_export_vst3!(OscillatorTest);
+nih_export_clap!(Paramic);
+nih_export_vst3!(Paramic);

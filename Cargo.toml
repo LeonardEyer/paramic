@@ -1,5 +1,5 @@
 [package]
-name = "test_vst_rust"
+name = "paramic"
 version = "0.1.0"
 edition = "2021"
 authors = ["Leonard Eyer <your@email.com>"]
