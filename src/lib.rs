@@ -1,20 +1,22 @@
 mod oscillators;
 pub mod parametric_equation;
 
-use crate::oscillators::Oscillator;
+use crate::oscillators::ParametricOscillator;
 
 use nih_plug::prelude::*;
 use std::sync::Arc;
 use nih_plug_egui::{create_egui_editor, egui, widgets, EguiState};
+use crate::parametric_equation::{EquationA, ParametricEquation};
 
 /// A test tone generator that can either generate a sine wave based on the plugin's parameters or
 /// based on the current MIDI input.
 pub struct OscillatorTest {
     params: Arc<OscillatorTestParams>,
+
     sample_rate: f32,
 
     /// The underlying oscillator
-    oscillator: oscillators::SquareOscillator,
+    oscillator: oscillators::ParametricOscillatorA,
 
     /// The MIDI note ID of the active note, if triggered by MIDI.
     midi_note_id: u8,
@@ -43,15 +45,43 @@ struct OscillatorTestParams {
 
     #[id = "usemid"]
     pub use_midi: BoolParam,
+
+    #[id = "a"]
+    pub a: IntParam,
+
+    #[id = "b"]
+    pub b: IntParam,
+
+    #[id = "c"]
+    pub c: IntParam,
+
+    #[id = "d"]
+    pub d: IntParam,
+
+    #[id = "j"]
+    pub j: IntParam,
+
+    #[id = "k"]
+    pub k: IntParam,
 }
 
 impl Default for OscillatorTest {
+
     fn default() -> Self {
         Self {
             params: Arc::new(OscillatorTestParams::default()),
+
             sample_rate: 1.0,
 
-            oscillator: oscillators::SquareOscillator::new(1.0),
+            oscillator: oscillators::ParametricOscillatorA::new(
+                1.0, EquationA {
+                    a: OscillatorTestParams::default().a.value(),
+                    b: OscillatorTestParams::default().b.value(),
+                    c: OscillatorTestParams::default().c.value(),
+                    d: OscillatorTestParams::default().d.value(),
+                    j: OscillatorTestParams::default().j.value(),
+                    k: OscillatorTestParams::default().k.value(),
+                }),
 
             midi_note_id: 0,
             midi_note_freq: 1.0,
@@ -63,19 +93,19 @@ impl Default for OscillatorTest {
 impl Default for OscillatorTestParams {
     fn default() -> Self {
         Self {
-            editor_state: EguiState::from_size(300, 300),
+            editor_state: EguiState::from_size(300, 500),
 
             gain: FloatParam::new(
-                "Gain",
-                -20.0,
-                FloatRange::Linear {
-                    min: -30.0,
-                    max: 0.0,
-                },
-            )
-                .with_smoother(SmoothingStyle::Linear(3.0))
+                    "Gain",
+                    -20.0,
+                    FloatRange::Linear {
+                        min: -30.0,
+                        max: 0.0,
+                    },
+                ).with_smoother(SmoothingStyle::Linear(3.0))
                 .with_step_size(0.01)
                 .with_unit(" dB"),
+
             frequency: FloatParam::new(
                 "Frequency",
                 420.0,
@@ -84,13 +114,62 @@ impl Default for OscillatorTestParams {
                     max: 20_000.0,
                     factor: FloatRange::skew_factor(-2.0),
                 },
-            )
-                .with_smoother(SmoothingStyle::Linear(10.0))
+                ).with_smoother(SmoothingStyle::Linear(10.0))
                 // We purposely don't specify a step size here, but the parameter should still be
                 // displayed as if it were rounded. This formatter also includes the unit.
                 .with_value_to_string(formatters::v2s_f32_hz_then_khz(0))
                 .with_string_to_value(formatters::s2v_f32_hz_then_khz()),
+
             use_midi: BoolParam::new("Use MIDI", false),
+
+            a : IntParam::new(
+                "a",
+                1,
+                IntRange::Linear {
+                    min: 1,
+                    max: 100,
+                },
+            ),
+            b : IntParam::new(
+                "b",
+                7,
+                IntRange::Linear {
+                    min: 1,
+                    max: 100,
+                },
+            ),
+            c : IntParam::new(
+                "c",
+                1,
+                IntRange::Linear {
+                    min: 1,
+                    max: 100,
+                },
+            ),
+            d : IntParam::new(
+                "d",
+                7,
+                IntRange::Linear {
+                    min: 1,
+                    max: 100,
+                },
+            ),
+            j : IntParam::new(
+                "j",
+                3,
+                IntRange::Linear {
+                    min: 1,
+                    max: 100,
+                },
+            ),
+            k : IntParam::new(
+                "k",
+                3,
+                IntRange::Linear {
+                    min: 1,
+                    max: 100,
+                },
+            ),
         }
     }
 }
@@ -148,9 +227,31 @@ impl Plugin for OscillatorTest {
                     ui.label("Frequency (Hz)");
                     ui.add(widgets::ParamSlider::for_param(&params.frequency, setter));
 
+                    ui.label("Parametric Equation");
+                    ui.label("(a, b, c, d, j, k)");
+                    ui.add(widgets::ParamSlider::for_param(&params.a, setter));
+                    ui.add(widgets::ParamSlider::for_param(&params.b, setter));
+                    ui.add(widgets::ParamSlider::for_param(&params.c, setter));
+                    ui.add(widgets::ParamSlider::for_param(&params.d, setter));
+                    ui.add(widgets::ParamSlider::for_param(&params.j, setter));
+                    ui.add(widgets::ParamSlider::for_param(&params.k, setter));
+
+                    ui.label("Use MIDI");
+                    ui.add(widgets::ParamSlider::for_param(&params.use_midi, setter));
+
+                    let equation = EquationA {
+                        a: params.a.value(),
+                        b: params.b.value(),
+                        c: params.c.value(),
+                        d: params.d.value(),
+                        j: params.j.value(),
+                        k: params.k.value(),
+                    };
+
                     let sin: egui::widgets::plot::PlotPoints = (0..1000).map(|i| {
-                        let x = i as f64 * 0.01;
-                        [x, x.sin()]
+                        let t = i as f64 * 0.01;
+                        let (x, y) = equation.get_position(t);
+                        [x, y]
                     }).collect();
                     let line = egui::widgets::plot::Line::new(sin);
 
@@ -192,6 +293,16 @@ impl Plugin for OscillatorTest {
         context: &mut impl ProcessContext<Self>,
     ) -> ProcessStatus {
         let mut next_event = context.next_event();
+
+        self.oscillator.set_equation(EquationA {
+            a: self.params.a.value(),
+            b: self.params.b.value(),
+            c: self.params.c.value(),
+            d: self.params.d.value(),
+            j: self.params.j.value(),
+            k: self.params.k.value(),
+        });
+
         for (sample_id, channel_samples) in buffer.iter_samples().enumerate() {
             // Smoothing is optionally built into the parameters themselves
             let gain = self.params.gain.smoothed.next();

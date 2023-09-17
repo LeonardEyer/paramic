@@ -2,6 +2,7 @@ pub trait ParametricEquation {
     fn get_position(&self, t: f64) -> (f64, f64);
 }
 
+#[derive(Debug, Clone)]
 pub struct EquationA {
     pub a: i32,
     pub b : i32,
