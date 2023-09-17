@@ -1,12 +1,11 @@
 mod oscillators;
-mod editor;
 pub mod parametric_equation;
 
 use crate::oscillators::Oscillator;
 
 use nih_plug::prelude::*;
 use std::sync::Arc;
-use nih_plug_iced::IcedState;
+use nih_plug_egui::{create_egui_editor, egui, widgets, EguiState};
 
 /// A test tone generator that can either generate a sine wave based on the plugin's parameters or
 /// based on the current MIDI input.
@@ -34,7 +33,7 @@ struct OscillatorTestParams {
     /// The editor state, saved together with the parameter state so the custom scaling can be
     /// restored.
     #[persist = "editor-state"]
-    editor_state: Arc<IcedState>,
+    editor_state: Arc<EguiState>,
 
     #[id = "gain"]
     pub gain: FloatParam,
@@ -64,10 +63,11 @@ impl Default for OscillatorTest {
 impl Default for OscillatorTestParams {
     fn default() -> Self {
         Self {
-            editor_state: editor::default_state(),
+            editor_state: EguiState::from_size(300, 300),
+
             gain: FloatParam::new(
                 "Gain",
-                -10.0,
+                -20.0,
                 FloatRange::Linear {
                     min: -30.0,
                     max: 0.0,
@@ -135,9 +135,35 @@ impl Plugin for OscillatorTest {
     }
 
     fn editor(&mut self, _async_executor: AsyncExecutor<Self>) -> Option<Box<dyn Editor>> {
-        editor::create(
-            self.params.clone(),
+        let params = self.params.clone();
+        create_egui_editor(
             self.params.editor_state.clone(),
+            (),
+            |_, _| {},
+            move |egui_ctx, setter, _state| {
+                egui::CentralPanel::default().show(egui_ctx, |ui| {
+                    ui.label("Gain");
+                    ui.add(widgets::ParamSlider::for_param(&params.gain, setter));
+
+                    ui.label("Frequency (Hz)");
+                    ui.add(widgets::ParamSlider::for_param(&params.frequency, setter));
+
+                    let sin: egui::widgets::plot::PlotPoints = (0..1000).map(|i| {
+                        let x = i as f64 * 0.01;
+                        [x, x.sin()]
+                    }).collect();
+                    let line = egui::widgets::plot::Line::new(sin);
+
+                    ui.label("Plot");
+                    egui::widgets::plot::Plot::new("Plot")
+                        .width(100.)
+                        .view_aspect(1.0)
+                        .show_axes([false, false])
+                        .show_x(false)
+                        .show_y(false)
+                        .show(ui, |plot_ui| plot_ui.line(line));
+                });
+            },
         )
     }
 
