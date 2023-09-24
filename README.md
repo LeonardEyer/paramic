@@ -2,8 +2,13 @@
 
 ## Building
 
-After installing [Rust](https://rustup.rs/), you can compile Test Vst Rust as follows:
+After installing [Rust](https://rustup.rs/), you can compile as follows:
 
 ```shell
 cargo xtask bundle paramic --release
+```
+
+## Standalone
+```shell
+cargo run --release
 ```
