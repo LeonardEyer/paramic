@@ -93,7 +93,7 @@ impl Default for Paramic {
 impl Default for ParamicParams {
     fn default() -> Self {
         Self {
-            editor_state: EguiState::from_size(300, 500),
+            editor_state: EguiState::from_size(300, 600),
 
             gain: FloatParam::new(
                     "Gain",
@@ -175,7 +175,7 @@ impl Default for ParamicParams {
 }
 
 impl Paramic {
-    fn calculate_sine(&mut self, frequency: f32) -> f32 {
+    fn calculate_sample(&mut self, frequency: f32) -> f32 {
         self.oscillator.set_frequency(frequency);
         self.oscillator.sample()
     }
@@ -248,14 +248,31 @@ impl Plugin for Paramic {
                         k: params.k.value(),
                     };
 
-                    let sin: egui::widgets::plot::PlotPoints = (0..1000).map(|i| {
+                    let curve: egui::widgets::plot::PlotPoints = (0..1000).map(|i| {
                         let t = i as f64 * 0.01;
                         let (x, y) = equation.get_position(t);
                         [x, y]
                     }).collect();
-                    let line = egui::widgets::plot::Line::new(sin);
+                    let line = egui::widgets::plot::Line::new(curve);
 
-                    ui.label("Plot");
+                    ui.label("Parametric curve");
+                    egui::widgets::plot::Plot::new("Plot")
+                        .width(100.)
+                        .view_aspect(1.0)
+                        .show_axes([false, false])
+                        .show_x(false)
+                        .show_y(false)
+                        .show(ui, |plot_ui| plot_ui.line(line));
+
+
+                    let signal: egui::widgets::plot::PlotPoints = (0..1000).map(|i| {
+                        let t = (i as f64 / 1000.) * equation.get_period();
+                        let (x, y) = equation.get_position(t);
+                        [t, ((x.powi(2) + y.powi(2)).sqrt() - 1.0)]
+                    }).collect();
+
+                    let line = egui::widgets::plot::Line::new(signal);
+                    ui.label("Signal");
                     egui::widgets::plot::Plot::new("Plot")
                         .width(100.)
                         .view_aspect(1.0)
@@ -308,7 +325,7 @@ impl Plugin for Paramic {
             let gain = self.params.gain.smoothed.next();
 
             // This plugin can be either triggered by MIDI or controleld by a parameter
-            let sine = if self.params.use_midi.value() {
+            let wave = if self.params.use_midi.value() {
                 // Act on the next MIDI event
                 while let Some(event) = next_event {
                     if event.timing() > sample_id as u32 {
@@ -336,14 +353,14 @@ impl Plugin for Paramic {
                 }
 
                 // This gain envelope prevents clicks with new notes and with released notes
-                self.calculate_sine(self.midi_note_freq) * self.midi_note_gain.next()
+                self.calculate_sample(self.midi_note_freq) * self.midi_note_gain.next()
             } else {
                 let frequency = self.params.frequency.smoothed.next();
-                self.calculate_sine(frequency)
+                self.calculate_sample(frequency)
             };
 
             for sample in channel_samples {
-                *sample = sine * util::db_to_gain_fast(gain);
+                *sample = wave * util::db_to_gain_fast(gain);
             }
         }
 
