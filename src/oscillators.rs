@@ -92,6 +92,7 @@ pub struct ParametricOscillatorA {
     phase: f32,
     frequency: f32,
     equation: EquationA,
+    period : f64,
 }
 
 impl ParametricOscillatorA {
@@ -100,6 +101,7 @@ impl ParametricOscillatorA {
             sample_rate,
             phase: 0.0,
             frequency: 440.0,
+            period: equation.get_period(),
             equation,
         }
     }
@@ -121,8 +123,8 @@ impl ParametricOscillator for ParametricOscillatorA {
 
     fn sample(&mut self) -> f32 {
         self.phase += self.frequency / self.sample_rate;
-        if self.phase > 1.0 {
-            self.phase -= 1.0;
+        if self.phase > self.period as f32 {
+            self.phase -= self.period as f32;
         }
         let (x, y) = self.equation.get_position(self.phase as f64);
         ((x.powi(2) + y.powi(2)).sqrt() - 1.0) as f32
