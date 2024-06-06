@@ -248,11 +248,16 @@ impl Plugin for Paramic {
                         k: params.k.value(),
                     };
 
-                    let curve: egui::widgets::plot::PlotPoints = (0..1000).map(|i| {
-                        let t = i as f64 * 0.01;
+                    let period = equation.get_period();
+                    
+                    let curvepoints: Vec<[f64; 2]> = (0..1000).map(|i| {
+                        let t = (i as f64 / 1000.) * period;
                         let (x, y) = equation.get_position(t);
                         [x, y]
                     }).collect();
+                    
+                    let curve: egui::widgets::plot::PlotPoints = curvepoints.iter()
+                        .map(|[x, y]| [*x, *y]).collect();
                     let line = egui::widgets::plot::Line::new(curve);
 
                     ui.label("Parametric curve");
@@ -265,10 +270,8 @@ impl Plugin for Paramic {
                         .show(ui, |plot_ui| plot_ui.line(line));
 
 
-                    let signal: egui::widgets::plot::PlotPoints = (0..1000).map(|i| {
-                        let t = (i as f64 / 1000.) * equation.get_period();
-                        let (x, y) = equation.get_position(t);
-                        [t, ((x.powi(2) + y.powi(2)).sqrt() - 1.0)]
+                    let signal: egui::widgets::plot::PlotPoints = curvepoints.iter().enumerate().map(|(i, [x, y])| {
+                        [i as f64, ((x.powi(2) + y.powi(2)).sqrt() - 1.0)]
                     }).collect();
 
                     let line = egui::widgets::plot::Line::new(signal);

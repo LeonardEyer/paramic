@@ -1,3 +1,5 @@
+use num::Integer;
+
 pub trait ParametricEquation {
     fn get_position(&self, t: f64) -> (f64, f64);
 
@@ -23,12 +25,10 @@ impl ParametricEquation for EquationA {
     }
 
     fn get_period(&self) -> f64 {
-        for i in 1..1000 {
-            let (x, y) = self.get_position(i as f64);
-            if x > 0.0 && y > 0.0 {
-                return i as f64;
-            }
-        }
-        1000.0
+        let x_gcd = self.a.gcd(&self.b);
+        let y_gcd = self.c.gcd(&self.d);
+        let gcd = x_gcd.gcd(&y_gcd);
+        
+        std::f64::consts::TAU / gcd as f64
     }
 }
